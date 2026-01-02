@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Project 1 - Platformer Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        canvas {
+            border: 2px solid #333;
+            display: block;
+            margin: 20px auto;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../../index.php" class="back-link">← Back to Project Hub</a>
+        <h1>Sample Project 1: Platformer Demo</h1>
+        <p>This is a sample game project demonstrating basic platformer mechanics.</p>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <script>
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple animation
+            let x = 50;
+            let y = 200;
+            let dx = 2;
+            
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw background
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw ground
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(0, 350, canvas.width, 50);
+                
+                // Draw player
+                ctx.fillStyle = '#FF6347';
+                ctx.fillRect(x, y, 30, 30);
+                
+                // Move player
+                x += dx;
+                if (x > canvas.width - 30 || x < 0) {
+                    dx = -dx;
+                }
+                
+                requestAnimationFrame(draw);
+            }
+            
+            draw();
+        </script>
+    </div>
+</body>
+</html>

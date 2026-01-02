@@ -1,0 +1,1 @@
+A simple platformer game demo showcasing basic physics and collision detection.
