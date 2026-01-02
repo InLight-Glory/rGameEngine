@@ -1,0 +1,1 @@
+An interactive puzzle game with tile-based mechanics and level progression.
