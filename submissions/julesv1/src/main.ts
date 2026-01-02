@@ -6,6 +6,7 @@ import { PhysicsComponent } from './components/PhysicsComponent';
 import { RegionComponent } from './components/RegionComponent';
 import { LifecycleState, BlendMode } from './core/Constants';
 import { Vector3, ArcRotateCamera, HemisphericLight } from 'babylonjs';
+import { Editor } from './editor/Editor';
 
 // Setup
 const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
@@ -71,7 +72,12 @@ region.activate();
 // Load Level
 engine.loadLevel(level);
 
+// Initialize Editor
+// We need to wait for engine to start or just init it.
+const editor = new Editor(engine);
+
 // Start
 engine.start();
 
 console.log("Game Engine Started. Watch the player sphere fall. Move it into the blue box to see gravity change.");
+console.log("Editor initialized. Select objects to see inspector.");
