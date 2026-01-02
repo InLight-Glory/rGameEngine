@@ -124,7 +124,7 @@
         
         // Create submissions folder if it doesn't exist
         if (!file_exists($submissionsFolder)) {
-            mkdir($submissionsFolder, 0755, true);
+            @mkdir($submissionsFolder, 0755, true);
         }
         
         // Scan the submissions folder for project directories
@@ -153,12 +153,21 @@
                     // Check for a description file
                     $descFile = $itemPath . '/description.txt';
                     if (file_exists($descFile)) {
-                        $projectInfo['description'] = file_get_contents($descFile);
+                        $content = @file_get_contents($descFile);
+                        if ($content !== false) {
+                            $projectInfo['description'] = trim($content);
+                        }
                     }
                     
                     // Check if project has an index file
-                    if (file_exists($itemPath . '/index.html') || file_exists($itemPath . '/index.php')) {
+                    $indexHtml = $itemPath . '/index.html';
+                    $indexPhp = $itemPath . '/index.php';
+                    if (file_exists($indexHtml)) {
                         $projectInfo['hasIndex'] = true;
+                        $projectInfo['indexFile'] = 'index.html';
+                    } elseif (file_exists($indexPhp)) {
+                        $projectInfo['hasIndex'] = true;
+                        $projectInfo['indexFile'] = 'index.php';
                     }
                     
                     $projects[] = $projectInfo;
@@ -200,8 +209,7 @@
                     }
                     
                     if ($project['hasIndex']) {
-                        $indexFile = file_exists(__DIR__ . '/' . $project['path'] . '/index.html') ? 'index.html' : 'index.php';
-                        echo '<a href="' . htmlspecialchars($project['path']) . '/' . $indexFile . '" class="project-link">Open Project →</a>';
+                        echo '<a href="' . htmlspecialchars($project['path']) . '/' . htmlspecialchars($project['indexFile']) . '" class="project-link">Open Project →</a>';
                     } else {
                         echo '<a href="' . htmlspecialchars($project['path']) . '/" class="project-link">Browse Files →</a>';
                     }
