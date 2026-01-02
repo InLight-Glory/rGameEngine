@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babylon.js Spec-Engine + Tools</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-panel: #252526;
+            --accent: #007acc;
+            --text-main: #cccccc;
+            --border: #3e3e42;
+            --success: #4caf50;
+            --warn: #ce9178;
+            --err: #f44336;
+            --code-bg: #111;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { margin: 0; padding: 0; background: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Header */
+        header { height: 45px; background: #333; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); justify-content: space-between; }
+        h1 { font-size: 14px; font-weight: 600; color: white; margin: 0; }
+        .toolbar { display: flex; gap: 5px; align-items: center; }
+        .toolbar button { background: var(--bg-panel); border: 1px solid var(--border); color: white; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+        .toolbar button:hover { background: var(--border); }
+        .toolbar button.active { background: var(--accent); border-color: var(--accent); color: white; }
+        .btn-play { background: var(--success) !important; border-color: var(--success) !important; color: white !important; font-weight: bold; width: 60px; }
+
+        /* Main Layout */
+        main { display: flex; flex: 1; position: relative; }
+
+        /* Panels */
+        .panel { background: var(--bg-panel); display: flex; flex-direction: column; }
+        .panel-header { padding: 8px 10px; background: #333; font-size: 11px; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;}
+        
+        #hierarchy { width: 260px; border-right: 1px solid var(--border); overflow-y: auto; user-select: none; }
+        #viewport { flex: 1; position: relative; background: #000; }
+        #inspector { width: 320px; border-left: 1px solid var(--border); overflow-y: auto; }
+        
+        /* Bottom Area (Assets + Console) */
+        #bottom-area { position: absolute; bottom: 0; left: 260px; right: 320px; height: 200px; background: var(--bg-panel); border-top: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
+        .tabs { display: flex; background: #333; }
+        .tab { padding: 5px 15px; font-size: 11px; cursor: pointer; border-top: 2px solid transparent; }
+        .tab.active { background: var(--bg-panel); border-top-color: var(--accent); color: white; }
+        
+        .tab-content { flex: 1; overflow: hidden; display: none; padding: 10px; }
+        .tab-content.active { display: block; }
+
+        #console-logs { height: 100%; overflow-y: auto; padding: 5px; font-family: 'Consolas', monospace; font-size: 11px; }
+
+        /* Hierarchy Items */
+        .tree-item { padding: 4px 10px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+        .tree-item:hover { background: #2a2d2e; }
+        .tree-item.selected { background: #37373d; color: white; border-left: 2px solid var(--accent); }
+        .icon { width: 14px; text-align: center; display: inline-block; opacity: 0.7; }
+
+        /* Inspector */
+        .prop-group { padding: 10px; border-bottom: 1px solid var(--border); }
+        .prop-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--accent); display: flex; justify-content: space-between; }
+        .prop-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+        .prop-label { width: 90px; color: #999; }
+        .prop-val { flex: 1; }
+        input, select, textarea { background: #3c3c3c; border: 1px solid #3c3c3c; color: white; padding: 3px 5px; width: 100%; font-family: inherit; font-size: 11px; }
+        input:focus { outline: 1px solid var(--accent); }
+        
+        /* Code Editor */
+        .code-editor { background: var(--code-bg); color: #dcdcdc; font-family: 'Consolas', monospace; font-size: 12px; border: 1px solid #444; resize: vertical; min-height: 100px; }
+
+        /* Asset Browser Grid */
+        .asset-grid { display: flex; flex-wrap: wrap; gap: 10px; overflow-y: auto; height: 100%; }
+        .asset-item { width: 80px; height: 80px; background: #333; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+        .asset-item:hover { border-color: var(--accent); }
+        .asset-item img { max-width: 100%; max-height: 100%; }
+        .asset-item span { font-size: 10px; margin-top: 5px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 90%; }
+
+        .remove-btn { color: #f44336; cursor: pointer; }
+
+        /* Log Colors */
+        .log-info { color: #ddd; }
+        .log-event { color: var(--success); }
+        .log-warn { color: var(--warn); }
+        .log-err { color: var(--err); }
+        .log-sys { color: #569cd6; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Spec-Engine <small style="font-weight:normal; opacity:0.6">v1.2 (Tools)</small></h1>
+    <div class="toolbar">
+        <!-- Gizmo Toggles -->
+        <button id="gizmo-pos" class="active" onclick="Editor.setGizmoMode('position')">Pos</button>
+        <button id="gizmo-rot" onclick="Editor.setGizmoMode('rotation')">Rot</button>
+        <button id="gizmo-scl" onclick="Editor.setGizmoMode('scale')">Scl</button>
+        <div style="width:1px; height:20px; background:#555; margin:0 5px;"></div>
+        <button onclick="Editor.newLevel()">+ Level</button>
+        <button onclick="Editor.addEntity('object')">+ Object</button>
+        <button onclick="Editor.addEntity('instance')">+ Instance</button>
+        <button onclick="Editor.addEntity('region')">+ Region</button>
+        <button id="btn-play" class="btn-play" onclick="Editor.togglePlay()">▶ Play</button>
+    </div>
+</header>
+
+<main>
+    <div id="hierarchy" class="panel">
+        <div class="panel-header">Hierarchy</div>
+        <div id="tree-root"></div>
+    </div>
+
+    <div id="viewport" class="panel">
+        <canvas id="renderCanvas"></canvas>
+    </div>
+
+    <div id="inspector" class="panel">
+        <div class="panel-header">Inspector</div>
+        <div id="inspector-content"></div>
+    </div>
+
+    <div id="bottom-area">
+        <div class="tabs">
+            <div class="tab active" onclick="Editor.switchTab('assets')">Assets & Textures</div>
+            <div class="tab" onclick="Editor.switchTab('console')">System Console</div>
+        </div>
+        <div id="tab-assets" class="tab-content active">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span style="font-size:12px;">Drag to Apply to Selected Object</span>
+                <button onclick="document.getElementById('file-upload').click()">+ Import Image</button>
+                <input type="file" id="file-upload" accept="image/*" style="display:none" onchange="Editor.handleFileUpload(this)">
+            </div>
+            <div id="asset-list" class="asset-grid">
+                <!-- Default Assets -->
+                <div class="asset-item" onclick="Editor.applyTexture('#4caf50')">
+                    <div style="width:40px; height:40px; background:#4caf50;"></div>
+                    <span>Green Paint</span>
+                </div>
+                <div class="asset-item" onclick="Editor.applyTexture('#f44336')">
+                    <div style="width:40px; height:40px; background:#f44336;"></div>
+                    <span>Red Paint</span>
+                </div>
+                <div class="asset-item" onclick="Editor.applyTexture('#2196f3')">
+                    <div style="width:40px; height:40px; background:#2196f3;"></div>
+                    <span>Blue Paint</span>
+                </div>
+            </div>
+        </div>
+        <div id="tab-console" class="tab-content">
+            <div id="console-logs"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+// --- UTILS ---
+const UUID = () => Math.random().toString(36).substr(2, 9);
+const SPEC_VERSION = "1.2";
+const LOG = (msg, type = 'info') => {
+    const el = document.getElementById('console-logs');
+    const div = document.createElement('div');
+    div.className = `log-${type}`;
+    const time = new Date().toLocaleTimeString().split(' ')[0];
+    div.innerText = `[${time}] ${msg}`;
+    el.appendChild(div);
+    el.scrollTop = el.scrollHeight;
+};
+
+// --- DEFAULT DATA ---
+const DEFAULT_PROJECT = {
+    specVersion: SPEC_VERSION,
+    globals: { gravity: -9.81, timeScale: 1.0 },
+    levels: [
+        {
+            id: "lvl_main",
+            name: "Main Level",
+            entities: [
+                {
+                    id: "ent_player",
+                    type: "object",
+                    name: "Player",
+                    state: "active",
+                    components: [
+                        { type: "Transform", props: { position: [0, 1, 0], rotation: [0,0,0], scaling: [1,1,1] } },
+                        { type: "MeshRenderer", props: { shape: "capsule", color: "#007acc", texture: "" } },
+                        { type: "Movement", props: { speed: 0.1 } }
+                    ]
+                },
+                {
+                    id: "ent_floor",
+                    type: "object",
+                    name: "Ground",
+                    state: "active",
+                    components: [
+                        { type: "Transform", props: { position: [0, -0.5, 0], scaling: [10, 1, 10] } },
+                        { type: "MeshRenderer", props: { shape: "box", color: "#333333", texture: "" } }
+                    ]
+                },
+                {
+                    id: "ent_pillar",
+                    type: "object",
+                    name: "Cylinder",
+                    state: "active",
+                    components: [
+                        { type: "Transform", props: { position: [3, 1, 0], scaling: [1, 2, 1] } },
+                        { type: "MeshRenderer", props: { shape: "cylinder", color: "#ff9800", texture: "" } }
+                    ]
+                },
+                {
+                    id: "ent_region_slow",
+                    type: "region",
+                    name: "Slow Zone",
+                    state: "active",
+                    components: [
+                        { type: "Transform", props: { position: [2, 1, 0], scaling: [2, 2, 2] } },
+                        { type: "RegionVolume", props: { priority: 1, visible: true } },
+                        { type: "PropertyOverride", props: { overrides: [{ key: "speed", value: 0.02, mode: "override" }] } }
+                    ]
+                },
+                {
+                    id: "ent_script_demo",
+                    type: "instance",
+                    name: "Spawner",
+                    state: "active",
+                    components: [
+                        { type: "Transform", props: { position: [0, 5, 0] } },
+                        { type: "Script", props: { 
+                            source: "// Update runs every frame\nconsole.log('Tick');\nif (Math.random() < 0.01) {\n  console.log('Event Fired!');\n}" 
+                        } }
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+// --- ENGINE CORE ---
+class GameEngine {
+    constructor() {
+        this.canvas = document.getElementById("renderCanvas");
+        this.babylonEngine = new BABYLON.Engine(this.canvas, true);
+        this.project = JSON.parse(JSON.stringify(DEFAULT_PROJECT));
+        this.levels = new Map();
+        this.isPlaying = false;
+        this.snapshot = null;
+        this.fixedDeltaTime = 1 / 60;
+        this.accumulator = 0;
+        this.selection = null;
+
+        this.initSystems();
+        this.loadProject(this.project);
+        this.renderLoop();
+    }
+
+    initSystems() {
+        this.systems = {
+            region: new RegionSystem(this),
+            logic: new LogicSystem(this),
+            transform: new TransformSystem(this),
+            render: new RenderSystem(this)
+        };
+    }
+
+    loadProject(data) {
+        this.levels.forEach(l => l.dispose());
+        this.levels.clear();
+        this.project = data;
+        this.project.levels.forEach(lvlData => {
+            const level = new Level(this, lvlData);
+            this.levels.set(lvlData.id, level);
+        });
+        Editor.refresh();
+    }
+
+    togglePlay() {
+        if (this.isPlaying) {
+            this.project = JSON.parse(this.snapshot);
+            this.snapshot = null;
+            this.loadProject(this.project);
+            this.isPlaying = false;
+            document.getElementById('btn-play').innerHTML = "▶ Play";
+            document.getElementById('btn-play').className = "btn-play";
+            LOG("Simulation Stopped.", "sys");
+        } else {
+            this.snapshot = JSON.stringify(this.project);
+            this.levels.forEach(l => l.initializeEntities());
+            this.isPlaying = true;
+            document.getElementById('btn-play').innerHTML = "■ Stop";
+            document.getElementById('btn-play').className = "btn-stop";
+            LOG("Simulation Started.", "sys");
+        }
+    }
+
+    renderLoop() {
+        this.babylonEngine.runRenderLoop(() => {
+            if (this.isPlaying) {
+                const deltaTime = this.babylonEngine.getDeltaTime() / 1000;
+                this.accumulator += deltaTime;
+                while (this.accumulator >= this.fixedDeltaTime) {
+                    this.fixedUpdate(this.fixedDeltaTime);
+                    this.accumulator -= this.fixedDeltaTime;
+                }
+            }
+            this.levels.forEach(l => l.babylonScene.render());
+        });
+        window.addEventListener("resize", () => this.babylonEngine.resize());
+    }
+
+    fixedUpdate(dt) {
+        this.systems.region.update(dt);
+        this.systems.logic.update(dt);
+        this.systems.transform.update(dt);
+    }
+}
+
+// --- LEVEL (Includes Gizmos) ---
+class Level {
+    constructor(engine, data) {
+        this.engine = engine;
+        this.data = data;
+        this.entities = new Map();
+        this.babylonScene = new BABYLON.Scene(engine.babylonEngine);
+        this.babylonScene.clearColor = new BABYLON.Color4(0.1, 0.1, 0.1, 1);
+        
+        // Camera
+        this.camera = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 2, Math.PI / 2.5, 10, BABYLON.Vector3.Zero(), this.babylonScene);
+        this.camera.attachControl(engine.canvas, true);
+        this.camera.wheelPrecision = 50;
+        
+        new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), this.babylonScene);
+
+        // --- GIZMO MANAGER (Requirement: Visual Handles) ---
+        this.gizmoManager = new BABYLON.GizmoManager(this.babylonScene);
+        this.gizmoManager.positionGizmoEnabled = true;
+        this.gizmoManager.rotationGizmoEnabled = false;
+        this.gizmoManager.scaleGizmoEnabled = false;
+        this.gizmoManager.usePointerToAttachGizmos = false; // We attach manually via selection
+        this.gizmoManager.clearGizmoOnEmptyPointerEvent = true;
+
+        this.data.entities.forEach(entData => {
+            const ent = new Entity(this, entData);
+            this.entities.set(entData.id, ent);
+        });
+    }
+
+    initializeEntities() {
+        this.entities.forEach(e => e.initialize());
+    }
+
+    dispose() {
+        this.gizmoManager.dispose();
+        this.babylonScene.dispose();
+        this.entities.forEach(e => e.dispose());
+        this.entities.clear();
+    }
+}
+
+// --- ENTITY ---
+class Entity {
+    constructor(level, data) {
+        this.level = level;
+        this.data = data;
+        this.babylonNode = null;
+        this.material = null; // Cache material for texture updates
+        this.effectiveProperties = {};
+        this.createVisuals();
+    }
+
+    initialize() { this.data.state = "active"; }
+
+    createVisuals() {
+        const compTf = this.getComponent("Transform");
+        const pos = compTf.props.position;
+        const rot = compTf.props.rotation;
+        const scl = compTf.props.scaling;
+
+        // Destroy old visuals if they exist
+        if(this.babylonNode) this.babylonNode.dispose();
+
+        // --- SHAPE SUPPORT (Requirement: More Shapes) ---
+        let mesh;
+        const compRen = this.getComponent("MeshRenderer");
+        const shape = compRen ? compRen.props.shape : "box";
+        const color = compRen ? compRen.props.color : "#ffffff";
+        
+        if (this.data.type === "object") {
+            switch(shape) {
+                case 'box': mesh = BABYLON.MeshBuilder.CreateBox(this.data.id, { size: 1 }, this.level.babylonScene); break;
+                case 'sphere': mesh = BABYLON.MeshBuilder.CreateSphere(this.data.id, { diameter: 1 }, this.level.babylonScene); break;
+                case 'cylinder': mesh = BABYLON.MeshBuilder.CreateCylinder(this.data.id, { height: 1, diameter: 1 }, this.level.babylonScene); break;
+                case 'capsule': mesh = BABYLON.MeshBuilder.CreateCapsule(this.data.id, { height: 1, radius: 0.5 }, this.level.babylonScene); break;
+                case 'plane': mesh = BABYLON.MeshBuilder.CreatePlane(this.data.id, { size: 1 }, this.level.babylonScene); break;
+                default: mesh = BABYLON.MeshBuilder.CreateBox(this.data.id, { size: 1 }, this.level.babylonScene);
+            }
+            this.babylonNode = mesh;
+
+            // --- MATERIAL & TEXTURE SUPPORT ---
+            this.material = new BABYLON.StandardMaterial("mat", this.level.babylonScene);
+            this.material.diffuseColor = BABYLON.Color3.FromHexString(color);
+            
+            if (compRen && compRen.props.texture) {
+                // Handle URL or Blob
+                try {
+                    this.material.diffuseTexture = new BABYLON.Texture(compRen.props.texture, this.level.babylonScene);
+                } catch(e) { console.warn("Texture load failed", e); }
+            }
+            mesh.material = this.material;
+        } 
+        else if (this.data.type === "region") {
+            mesh = BABYLON.MeshBuilder.CreateBox(this.data.id, { size: 1 }, this.level.babylonScene);
+            mesh.isPickable = false;
+            this.babylonNode = mesh;
+            const regComp = this.getComponent("RegionVolume");
+            if (regComp && regComp.props.visible) {
+                const mat = new BABYLON.StandardMaterial("regMat", this.level.babylonScene);
+                mat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+                mat.alpha = 0.2;
+                mat.wireframe = true;
+                mesh.material = mat;
+            } else mesh.isVisible = false;
+        }
+        else if (this.data.type === "instance") {
+            this.babylonNode = new BABYLON.TransformNode(this.data.id, this.level.babylonScene);
+        }
+
+        if (this.babylonNode) {
+            this.babylonNode.position = new BABYLON.Vector3(pos[0], pos[1], pos[2]);
+            this.babylonNode.rotation = new BABYLON.Vector3(rot[0], rot[1], rot[2]);
+            this.babylonNode.scaling = new BABYLON.Vector3(scl[0], scl[1], scl[2]);
+        }
+    }
+
+    getComponent(type) { return this.data.components.find(c => c.type === type); }
+    dispose() { if (this.babylonNode) this.babylonNode.dispose(); this.data.state = "destroyed"; }
+}
+
+// --- SYSTEMS ---
+class RegionSystem {
+    constructor(engine) { this.engine = engine; }
+    update(dt) {
+        this.engine.levels.forEach(level => {
+            const objects = Array.from(level.entities.values()).filter(e => e.data.type === 'object' && e.data.state === 'active');
+            const regions = Array.from(level.entities.values()).filter(e => e.data.type === 'region' && e.data.state === 'active');
+            objects.forEach(obj => {
+                obj.effectiveProperties = {};
+                const activeRegions = regions.filter(reg => obj.babylonNode && reg.babylonNode && obj.babylonNode.intersectsMesh(reg.babylonNode, false));
+                activeRegions.sort((a, b) => {
+                    const pA = a.getComponent("RegionVolume")?.props.priority || 0;
+                    const pB = b.getComponent("RegionVolume")?.props.priority || 0;
+                    return pB - pA;
+                });
+                activeRegions.forEach(reg => {
+                    const overComp = reg.getComponent("PropertyOverride");
+                    if (overComp) {
+                        overComp.props.overrides.forEach(o => {
+                            const current = obj.effectiveProperties[o.key];
+                            if (!current) obj.effectiveProperties[o.key] = o.value;
+                            else {
+                                if (o.mode === 'override') obj.effectiveProperties[o.key] = o.value;
+                                if (o.mode === 'add') obj.effectiveProperties[o.key] = current + o.value;
+                                if (o.mode === 'multiply') obj.effectiveProperties[o.key] = current * o.value;
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    }
+}
+
+class LogicSystem {
+    constructor(engine) { this.engine = engine; }
+    update(dt) {
+        this.engine.levels.forEach(level => {
+            level.entities.forEach(ent => {
+                if (ent.data.state !== 'active') return;
+                const script = ent.getComponent("Script");
+                if (script) {
+                    try {
+                        const fn = new Function('ent', 'dt', 'scene', script.props.source);
+                        fn(ent, dt, level.babylonScene);
+                    } catch (e) {
+                        LOG(`Script Error in ${ent.data.name}: ${e.message}`, "err");
+                    }
+                }
+                const move = ent.getComponent("Movement");
+                if (move && ent.babylonNode) {
+                    const speed = ent.effectiveProperties['speed'] !== undefined ? ent.effectiveProperties['speed'] : move.props.speed;
+                    if (this.engine.keys['KeyW']) ent.babylonNode.position.z += speed;
+                    if (this.engine.keys['KeyS']) ent.babylonNode.position.z -= speed;
+                    if (this.engine.keys['KeyA']) ent.babylonNode.position.x -= speed;
+                    if (this.engine.keys['KeyD']) ent.babylonNode.position.x += speed;
+                }
+            });
+        });
+    }
+}
+
+class TransformSystem { constructor(engine) { this.engine = engine; } update(dt) {} }
+class RenderSystem { constructor(engine) { this.engine = engine; } update(dt) {} }
+
+// --- EDITOR UI ---
+const Editor = {
+    init: () => {
+        window.Editor = Editor;
+        window.game = new GameEngine();
+        window.addEventListener("keydown", e => window.game.keys = window.game.keys || {}, window.game.keys[e.code] = true);
+        window.addEventListener("keyup", e => window.game.keys[e.code] = false);
+        LOG("Engine initialized. Spec Version: " + SPEC_VERSION, "sys");
+    },
+
+    refresh: () => {
+        Editor.renderHierarchy();
+        Editor.renderInspector();
+        Editor.updateGizmos();
+    },
+
+    // --- GIZMO LOGIC ---
+    setGizmoMode: (mode) => {
+        // Update Buttons
+        ['pos', 'rot', 'scl'].forEach(m => document.getElementById(`gizmo-${m}`).classList.remove('active'));
+        document.getElementById(`gizmo-${mode.substring(0,3)}`).classList.add('active');
+
+        // Update Engine
+        window.game.levels.forEach(level => {
+            level.gizmoManager.positionGizmoEnabled = (mode === 'position');
+            level.gizmoManager.rotationGizmoEnabled = (mode === 'rotation');
+            level.gizmoManager.scaleGizmoEnabled = (mode === 'scale');
+        });
+    },
+
+    updateGizmos: () => {
+        if(!window.game.selection) {
+            window.game.levels.forEach(l => l.gizmoManager.attachToMesh(null));
+            return;
+        }
+        const { levelId, entityId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const ent = level.entities.get(entityId);
+        
+        // Only attach gizmos to objects or regions (usually instances have no visual node to grab)
+        if(ent.babylonNode && (ent.data.type === 'object' || ent.data.type === 'region')) {
+            level.gizmoManager.attachToMesh(ent.babylonNode);
+        } else {
+            level.gizmoManager.attachToMesh(null);
+        }
+    },
+
+    // --- ASSET BROWSER ---
+    handleFileUpload: (input) => {
+        const file = input.files[0];
+        if(!file) return;
+        const url = URL.createObjectURL(file);
+        
+        // Add to List
+        const list = document.getElementById('asset-list');
+        const div = document.createElement('div');
+        div.className = 'asset-item';
+        div.onclick = () => Editor.applyTexture(url);
+        div.innerHTML = `<img src="${url}"><span>${file.name}</span>`;
+        list.appendChild(div);
+        
+        // Auto apply if object selected
+        Editor.applyTexture(url);
+    },
+
+    applyTexture: (val) => {
+        if(!window.game.selection) { LOG("No object selected", "warn"); return; }
+        const { levelId, entityId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const ent = level.entities.get(entityId);
+        
+        if(ent.data.type !== 'object') { LOG("Can only apply textures to Objects", "warn"); return; }
+
+        // Find or create MeshRenderer
+        let ren = ent.getComponent("MeshRenderer");
+        if(!ren) {
+            ren = { type: "MeshRenderer", props: { shape: "box", color: "#ffffff", texture: "" } };
+            ent.data.components.push(ren);
+        }
+        
+        ren.props.texture = val; // This is either a Hex code or URL
+        ent.createVisuals(); // Rebuild mesh
+        Editor.renderInspector();
+        LOG("Texture applied", "success");
+    },
+
+    // --- UI ---
+    switchTab: (tabName) => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    },
+
+    renderHierarchy: () => {
+        const root = document.getElementById('tree-root');
+        root.innerHTML = '';
+        window.game.levels.forEach((lvl, lvlId) => {
+            const lvlDiv = document.createElement('div');
+            lvlDiv.innerHTML = `<div class="tree-item"><span class="icon">📁</span> ${lvl.data.name}</div>`;
+            root.appendChild(lvlDiv);
+
+            lvl.entities.forEach(ent => {
+                const row = document.createElement('div');
+                row.className = 'tree-item';
+                if(window.game.selection && window.game.selection.entityId === ent.data.id) row.classList.add('selected');
+                let icon = '❓';
+                if(ent.data.type === 'object') icon = '🧊';
+                if(ent.data.type === 'instance') icon = '⚙️';
+                if(ent.data.type === 'region') icon = '📍';
+                row.innerHTML = `<span class="tree-indent"></span><span class="icon">${icon}</span> ${ent.data.name}`;
+                row.onclick = () => {
+                    window.game.selection = { levelId: lvl.data.id, entityId: ent.data.id };
+                    Editor.refresh();
+                };
+                lvlDiv.appendChild(row);
+            });
+        });
+    },
+
+    renderInspector: () => {
+        const container = document.getElementById('inspector-content');
+        container.innerHTML = '';
+        if(!window.game.selection) { container.innerHTML = '<div style="padding:10px; color:#666;">Select an entity</div>'; return; }
+
+        const { levelId, entityId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const ent = level.entities.get(entityId);
+
+        container.innerHTML += `<div class="prop-group"><div class="prop-title">${ent.data.name} <span style="font-weight:normal; opacity:0.5">(${ent.data.type})</span></div></div>`;
+
+        if(Object.keys(ent.effectiveProperties).length > 0) {
+            container.innerHTML += `<div class="prop-group" style="border:1px dashed var(--accent); background:#1a1a1a"><div class="prop-title" style="color:var(--success)">Effective Properties</div>`;
+            for(let k in ent.effectiveProperties) container.innerHTML += `<div class="prop-row"><div class="prop-label">${k}</div><div class="prop-val">${ent.effectiveProperties[k]}</div></div>`;
+            container.innerHTML += `</div>`;
+        }
+
+        ent.data.components.forEach((comp, idx) => {
+            const div = document.createElement('div');
+            div.className = 'prop-group';
+            div.innerHTML = `<div class="prop-title">${comp.type} <span class="remove-btn" onclick="Editor.removeComponent(${idx})">×</span></div>`;
+            
+            for(let key in comp.props) {
+                const val = comp.props[key];
+                const row = document.createElement('div');
+                row.className = 'prop-row';
+
+                // --- SCRIPT EDITOR REQUIREMENT ---
+                if(comp.type === 'Script' && key === 'source') {
+                    row.innerHTML = `
+                        <div class="prop-val">
+                            <textarea class="code-editor" onchange="Editor.updateComponent(${idx}, '${key}', this.value)">${val}</textarea>
+                        </div>`;
+                } 
+                else if(comp.type === 'MeshRenderer' && key === 'shape') {
+                    // Shape Selector
+                    row.innerHTML = `
+                        <div class="prop-label">${key}</div>
+                        <div class="prop-val">
+                            <select onchange="Editor.updateComponent(${idx}, '${key}', this.value)">
+                                <option value="box" ${val==='box'?'selected':''}>Box</option>
+                                <option value="sphere" ${val==='sphere'?'selected':''}>Sphere</option>
+                                <option value="cylinder" ${val==='cylinder'?'selected':''}>Cylinder</option>
+                                <option value="capsule" ${val==='capsule'?'selected':''}>Capsule</option>
+                                <option value="plane" ${val==='plane'?'selected':''}>Plane</option>
+                            </select>
+                        </div>`;
+                }
+                else {
+                    // Standard Inputs
+                    let inputType = 'text';
+                    if(typeof val === 'number') inputType = 'number';
+                    row.innerHTML = `
+                        <div class="prop-label">${key}</div>
+                        <div class="prop-val">
+                            <input type="${inputType}" value="${val}" onchange="Editor.updateComponent(${idx}, '${key}', this.value)">
+                        </div>`;
+                }
+                div.appendChild(row);
+            }
+            container.appendChild(div);
+        });
+    },
+
+    updateComponent: (compIdx, key, val) => {
+        const { levelId, entityId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const ent = level.entities.get(entityId);
+        const comp = ent.data.components[compIdx];
+        
+        if(typeof comp.props[key] === 'number') val = parseFloat(val);
+        comp.props[key] = val;
+        
+        // If texture path changed
+        if(comp.type === 'MeshRenderer' && key === 'texture') {
+            ent.createVisuals();
+        }
+        // If shape changed
+        if(comp.type === 'MeshRenderer' && key === 'shape') {
+            ent.createVisuals();
+        }
+        Editor.renderInspector();
+    },
+
+    removeComponent: (idx) => {
+        const { levelId, entityId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const ent = level.entities.get(entityId);
+        ent.data.components.splice(idx, 1);
+        Editor.renderInspector();
+    },
+
+    newLevel: () => {
+        const id = UUID();
+        window.game.project.levels.push({ id: id, name: "New Level", entities: [] });
+        window.game.loadProject(window.game.project);
+    },
+
+    addEntity: (type) => {
+        if(!window.game.selection) { alert("Select a level/entity first"); return; }
+        const { levelId } = window.game.selection;
+        const level = window.game.levels.get(levelId);
+        const data = window.game.project.levels.find(l => l.id === levelId);
+        const newEnt = {
+            id: UUID(), type: type, name: `New ${type}`, state: "active",
+            components: [ { type: "Transform", props: { position: [0, 0, 0], rotation: [0,0,0], scaling: [1,1,1] } } ]
+        };
+        if (type === 'object') newEnt.components.push({ type: "MeshRenderer", props: { shape: "box", color: "#ffffff", texture: "" } });
+        if (type === 'region') {
+            newEnt.components.push({ type: "RegionVolume", props: { priority: 0, visible: true } });
+            newEnt.components.push({ type: "PropertyOverride", props: { overrides: [] } });
+        }
+        data.entities.push(newEnt);
+        const newLevelWrapper = new Level(window.game, data);
+        window.game.levels.set(levelId, newLevelWrapper);
+        Editor.renderHierarchy();
+    },
+
+    togglePlay: () => window.game.togglePlay()
+};
+
+window.onload = Editor.init;
+</script>
+</body>
+</html>
