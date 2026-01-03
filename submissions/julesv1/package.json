@@ -1,10 +1,11 @@
-
 {
   "name": "julesv1",
   "version": "1.0.0",
   "description": "Babylon.js Web Game Engine",
   "scripts": {
-    "build": "tsc"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
