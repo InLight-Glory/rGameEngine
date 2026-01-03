@@ -125,8 +125,8 @@
 
     <div id="bottom-area">
         <div class="tabs">
-            <div class="tab active" onclick="Editor.switchTab('assets')">Assets & Textures</div>
-            <div class="tab" onclick="Editor.switchTab('console')">System Console</div>
+            <div class="tab active" onclick="Editor.switchTab('assets', event)">Assets & Textures</div>
+            <div class="tab" onclick="Editor.switchTab('console', event)">System Console</div>
         </div>
         <div id="tab-assets" class="tab-content active">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
@@ -250,6 +250,10 @@ class GameEngine {
         this.fixedDeltaTime = 1 / 60;
         this.accumulator = 0;
         this.selection = null;
+
+        // Editor.refresh() is called during construction (via loadProject).
+        // Ensure the global is assigned early so Editor can safely read window.game.
+        if(typeof window !== 'undefined' && !window.game) window.game = this;
 
         this.initSystems();
         this.loadProject(this.project);
@@ -375,8 +379,8 @@ class Entity {
     createVisuals() {
         const compTf = this.getComponent("Transform");
         const pos = compTf.props.position;
-        const rot = compTf.props.rotation;
-        const scl = compTf.props.scaling;
+        const rot = compTf.props.rotation || [0, 0, 0];
+        const scl = compTf.props.scaling || [1, 1, 1];
 
         // Destroy old visuals if they exist
         if(this.babylonNode) this.babylonNode.dispose();
@@ -534,7 +538,7 @@ const Editor = {
     },
 
     updateGizmos: () => {
-        if(!window.game.selection) {
+        if(!window.game.selection || !window.game.selection.entityId) {
             window.game.levels.forEach(l => l.gizmoManager.attachToMesh(null));
             return;
         }
@@ -590,10 +594,10 @@ const Editor = {
     },
 
     // --- UI ---
-    switchTab: (tabName) => {
+    switchTab: (tabName, evt) => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        event.target.classList.add('active');
+        if(evt && evt.target) evt.target.classList.add('active');
         document.getElementById(`tab-${tabName}`).classList.add('active');
     },
 
@@ -602,7 +606,15 @@ const Editor = {
         root.innerHTML = '';
         window.game.levels.forEach((lvl, lvlId) => {
             const lvlDiv = document.createElement('div');
-            lvlDiv.innerHTML = `<div class="tree-item"><span class="icon">📁</span> ${lvl.data.name}</div>`;
+            const lvlRow = document.createElement('div');
+            lvlRow.className = 'tree-item';
+            if(window.game.selection && window.game.selection.levelId === lvl.data.id && !window.game.selection.entityId) lvlRow.classList.add('selected');
+            lvlRow.innerHTML = `<span class="icon">📁</span> ${lvl.data.name}`;
+            lvlRow.onclick = () => {
+                window.game.selection = { levelId: lvl.data.id, entityId: null };
+                Editor.refresh();
+            };
+            lvlDiv.appendChild(lvlRow);
             root.appendChild(lvlDiv);
 
             lvl.entities.forEach(ent => {
@@ -626,7 +638,15 @@ const Editor = {
     renderInspector: () => {
         const container = document.getElementById('inspector-content');
         container.innerHTML = '';
-        if(!window.game.selection) { container.innerHTML = '<div style="padding:10px; color:#666;">Select an entity</div>'; return; }
+        if(!window.game.selection) { container.innerHTML = '<div style="padding:10px; color:#666;">Select a level or entity</div>'; return; }
+
+        if(!window.game.selection.entityId) {
+            const level = window.game.levels.get(window.game.selection.levelId);
+            const name = level?.data?.name || 'Level';
+            container.innerHTML = `<div class="prop-group"><div class="prop-title">${name} <span style="font-weight:normal; opacity:0.5">(level)</span></div></div>`;
+            container.innerHTML += '<div style="padding:10px; color:#666;">Use the toolbar to add entities to this level.</div>';
+            return;
+        }
 
         const { levelId, entityId } = window.game.selection;
         const level = window.game.levels.get(levelId);
@@ -688,6 +708,7 @@ const Editor = {
     },
 
     updateComponent: (compIdx, key, val) => {
+        if(!window.game.selection || !window.game.selection.entityId) return;
         const { levelId, entityId } = window.game.selection;
         const level = window.game.levels.get(levelId);
         const ent = level.entities.get(entityId);
@@ -708,6 +729,7 @@ const Editor = {
     },
 
     removeComponent: (idx) => {
+        if(!window.game.selection || !window.game.selection.entityId) return;
         const { levelId, entityId } = window.game.selection;
         const level = window.game.levels.get(levelId);
         const ent = level.entities.get(entityId);
@@ -718,14 +740,15 @@ const Editor = {
     newLevel: () => {
         const id = UUID();
         window.game.project.levels.push({ id: id, name: "New Level", entities: [] });
+        window.game.selection = { levelId: id, entityId: null };
         window.game.loadProject(window.game.project);
     },
 
     addEntity: (type) => {
-        if(!window.game.selection) { alert("Select a level/entity first"); return; }
+        if(!window.game.selection || !window.game.selection.levelId) { alert("Select a level/entity first"); return; }
         const { levelId } = window.game.selection;
-        const level = window.game.levels.get(levelId);
         const data = window.game.project.levels.find(l => l.id === levelId);
+        if(!data) { LOG("Level not found", "err"); return; }
         const newEnt = {
             id: UUID(), type: type, name: `New ${type}`, state: "active",
             components: [ { type: "Transform", props: { position: [0, 0, 0], rotation: [0,0,0], scaling: [1,1,1] } } ]
@@ -736,9 +759,8 @@ const Editor = {
             newEnt.components.push({ type: "PropertyOverride", props: { overrides: [] } });
         }
         data.entities.push(newEnt);
-        const newLevelWrapper = new Level(window.game, data);
-        window.game.levels.set(levelId, newLevelWrapper);
-        Editor.renderHierarchy();
+        window.game.selection = { levelId, entityId: newEnt.id };
+        window.game.loadProject(window.game.project);
     },
 
     togglePlay: () => window.game.togglePlay()
