@@ -1,175 +1,205 @@
-import React from 'react';
-import { Entity, ComponentType, TransformComponent, MeshComponent, PhysicsComponent, RegionComponent, Vector3, RegionBlendMode } from '../types';
-import { Layers, Move, Box, Zap, Map } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { Entity, ComponentType, TransformComponent, MeshComponent, LightComponent, RegionComponent, ComponentData } from '../types';
 
 interface InspectorProps {
   entity: Entity | null;
-  onChange: (updatedEntity: Entity) => void;
+  onUpdateEntity: (id: string, updates: Partial<Entity>) => void;
+  onUpdateComponent: (entityId: string, componentId: string, data: Partial<ComponentData>) => void;
+  onAddComponent: (entityId: string, type: ComponentType) => void;
 }
 
-const InputRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
-    <div className="flex items-center justify-between py-1">
-        <label className="text-xs text-gray-500 w-24">{label}</label>
-        <div className="flex-1">{children}</div>
-    </div>
-);
-
-const Vec3Input = ({ value, onChange }: { value: Vector3, onChange: (v: Vector3) => void }) => {
-    const handleChange = (axis: keyof Vector3, num: number) => {
-        onChange({ ...value, [axis]: isNaN(num) ? 0 : num });
-    };
-    return (
-        <div className="flex gap-1">
-            {['x', 'y', 'z'].map(axis => (
-                <div key={axis} className="flex items-center bg-gray-800 rounded px-1 flex-1 border border-gray-700 focus-within:border-blue-500">
-                    <span className="text-[10px] text-gray-500 uppercase mr-1 w-2">{axis}</span>
-                    <input 
-                        type="number" 
-                        step="0.1"
-                        value={value[axis as keyof Vector3]}
-                        onChange={(e) => handleChange(axis as keyof Vector3, parseFloat(e.target.value))}
-                        className="w-full bg-transparent text-xs text-gray-200 outline-none py-1"
-                    />
-                </div>
-            ))}
-        </div>
-    );
-};
-
-export const Inspector: React.FC<InspectorProps> = ({ entity, onChange }) => {
+export const Inspector: React.FC<InspectorProps> = ({ entity, onUpdateEntity, onUpdateComponent, onAddComponent }) => {
   if (!entity) {
     return (
-      <div className="h-full bg-gray-900 border-l border-gray-800 flex items-center justify-center text-gray-600 text-sm italic p-8 text-center">
-        Select an object to inspect properties
+      <div className="h-full bg-[#252526] p-4 text-gray-500 text-sm text-center italic border-l border-black">
+        Select an object to inspect
       </div>
     );
   }
 
-  const updateComponent = (compIndex: number, newData: any) => {
-      const newComponents = [...entity.components];
-      newComponents[compIndex] = { ...newComponents[compIndex], ...newData };
-      onChange({ ...entity, components: newComponents });
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdateEntity(entity.id, { name: e.target.value });
   };
 
-  const updateName = (name: string) => onChange({ ...entity, name });
-
   return (
-    <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800 w-80">
-      <div className="p-3 border-b border-gray-800 bg-gray-900">
-          <div className="flex items-center gap-2 mb-2">
-            <Layers size={14} className="text-blue-500"/>
-            <span className="text-xs font-bold text-gray-400 uppercase">Properties</span>
-          </div>
+    <div className="flex flex-col h-full bg-[#252526] border-l border-black overflow-y-auto">
+      <div className="p-2 bg-[#333333] font-bold text-xs uppercase tracking-wider border-b border-black">
+        Inspector
+      </div>
+      
+      {/* Header */}
+      <div className="p-4 border-b border-[#3e3e42]">
+        <div className="flex items-center gap-2 mb-2">
           <input 
-            type="text" 
-            value={entity.name} 
-            onChange={(e) => updateName(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:border-blue-500 outline-none"
+            type="checkbox" 
+            checked={entity.isActive} 
+            onChange={(e) => onUpdateEntity(entity.id, { isActive: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-600 bg-[#1e1e1e]"
           />
-          <div className="text-[10px] text-gray-600 mt-1 font-mono">{entity.id}</div>
+          <input
+            type="text"
+            value={entity.name}
+            onChange={handleNameChange}
+            className="flex-1 bg-[#1e1e1e] border border-[#3e3e42] rounded px-2 py-1 text-white text-sm focus:border-blue-500 outline-none"
+          />
+        </div>
+        <div className="text-xs text-gray-500 font-mono">{entity.id}</div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {entity.components.map((comp, idx) => {
-            switch (comp.type) {
-                case ComponentType.TRANSFORM:
-                    const t = comp as TransformComponent;
-                    return (
-                        <div key={comp.id} className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-gray-300 pb-1 border-b border-gray-800">
-                                <Move size={12} /> TRANSFORM
-                            </div>
-                            <InputRow label="Position">
-                                <Vec3Input value={t.position} onChange={v => updateComponent(idx, { position: v })} />
-                            </InputRow>
-                            <InputRow label="Rotation">
-                                <Vec3Input value={t.rotation} onChange={v => updateComponent(idx, { rotation: v })} />
-                            </InputRow>
-                            <InputRow label="Scale">
-                                <Vec3Input value={t.scale} onChange={v => updateComponent(idx, { scale: v })} />
-                            </InputRow>
-                        </div>
-                    );
-                case ComponentType.MESH:
-                    const m = comp as MeshComponent;
-                    return (
-                        <div key={comp.id} className="space-y-2">
-                             <div className="flex items-center gap-2 text-xs font-bold text-gray-300 pb-1 border-b border-gray-800">
-                                <Box size={12} /> MESH
-                            </div>
-                            <InputRow label="Shape">
-                                <select 
-                                    value={m.shape} 
-                                    onChange={(e) => updateComponent(idx, { shape: e.target.value })}
-                                    className="w-full bg-gray-800 border border-gray-700 text-xs text-gray-200 rounded p-1 outline-none"
-                                >
-                                    <option value="box">Box</option>
-                                    <option value="sphere">Sphere</option>
-                                    <option value="plane">Plane</option>
-                                </select>
-                            </InputRow>
-                            <InputRow label="Color">
-                                <div className="flex gap-2">
-                                    <input type="color" value={m.color} onChange={e => updateComponent(idx, { color: e.target.value })} className="h-6 w-8 bg-transparent border-0 p-0 cursor-pointer" />
-                                    <span className="text-xs text-gray-400 self-center font-mono">{m.color}</span>
-                                </div>
-                            </InputRow>
-                            <InputRow label="Visible">
-                                <input type="checkbox" checked={m.visible} onChange={e => updateComponent(idx, { visible: e.target.checked })} />
-                            </InputRow>
-                        </div>
-                    );
-                case ComponentType.PHYSICS:
-                    const p = comp as PhysicsComponent;
-                    return (
-                        <div key={comp.id} className="space-y-2">
-                             <div className="flex items-center gap-2 text-xs font-bold text-gray-300 pb-1 border-b border-gray-800">
-                                <Zap size={12} /> PHYSICS
-                            </div>
-                            <InputRow label="Mass">
-                                <input type="number" value={p.mass} onChange={e => updateComponent(idx, { mass: parseFloat(e.target.value) })} className="w-full bg-gray-800 text-xs p-1 rounded border border-gray-700" />
-                            </InputRow>
-                            <InputRow label="Static">
-                                <input type="checkbox" checked={p.isStatic} onChange={e => updateComponent(idx, { isStatic: e.target.checked })} />
-                            </InputRow>
-                             <InputRow label="Gravity">
-                                <input type="checkbox" checked={p.useGravity} onChange={e => updateComponent(idx, { useGravity: e.target.checked })} />
-                            </InputRow>
-                        </div>
-                    );
-                case ComponentType.REGION:
-                    const r = comp as RegionComponent;
-                    return (
-                        <div key={comp.id} className="space-y-2">
-                             <div className="flex items-center gap-2 text-xs font-bold text-gray-300 pb-1 border-b border-gray-800">
-                                <Map size={12} /> REGION
-                            </div>
-                            <InputRow label="Priority">
-                                <input type="number" value={r.priority} onChange={e => updateComponent(idx, { priority: parseInt(e.target.value) })} className="w-full bg-gray-800 text-xs p-1 rounded border border-gray-700" />
-                            </InputRow>
-                            <InputRow label="Blend">
-                                 <select 
-                                    value={r.blendMode} 
-                                    onChange={(e) => updateComponent(idx, { blendMode: e.target.value })}
-                                    className="w-full bg-gray-800 border border-gray-700 text-xs text-gray-200 rounded p-1 outline-none"
-                                >
-                                    <option value={RegionBlendMode.OVERRIDE}>Override</option>
-                                    <option value={RegionBlendMode.ADD}>Add</option>
-                                    <option value={RegionBlendMode.MULTIPLY}>Multiply</option>
-                                </select>
-                            </InputRow>
-                            <InputRow label="Gravity Mod">
-                                <input type="number" step="0.1" value={r.modifiers.gravityScale ?? 1} onChange={e => updateComponent(idx, { modifiers: {...r.modifiers, gravityScale: parseFloat(e.target.value)} })} className="w-full bg-gray-800 text-xs p-1 rounded border border-gray-700" />
-                            </InputRow>
-                             <InputRow label="Size (Bounds)">
-                                <Vec3Input value={r.size} onChange={v => updateComponent(idx, { size: v })} />
-                            </InputRow>
-                        </div>
-                    );
-                default:
-                    return null;
+      {/* Components List */}
+      <div className="p-2 space-y-2">
+        {entity.components.map(comp => (
+          <ComponentEditor 
+            key={comp.id} 
+            component={comp} 
+            onChange={(data) => onUpdateComponent(entity.id, comp.id, data)} 
+          />
+        ))}
+      </div>
+
+      {/* Add Component Button */}
+      <div className="p-4 mt-auto border-t border-[#3e3e42]">
+        <select 
+          className="w-full bg-[#3e3e42] text-white text-sm p-2 rounded"
+          onChange={(e) => {
+            if (e.target.value) {
+              onAddComponent(entity.id, e.target.value as ComponentType);
+              e.target.value = "";
             }
-        })}
+          }}
+          value=""
+        >
+          <option value="" disabled>+ Add Component</option>
+          <option value={ComponentType.MESH}>Mesh</option>
+          <option value={ComponentType.LIGHT}>Light</option>
+          <option value={ComponentType.REGION}>Region</option>
+          <option value={ComponentType.PHYSICS}>Physics</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
+// --- Sub-Editors ---
+
+const ComponentEditor: React.FC<{ component: ComponentData; onChange: (d: any) => void }> = ({ component, onChange }) => {
+  return (
+    <div className="bg-[#1e1e1e] rounded border border-[#3e3e42] overflow-hidden">
+      <div className="bg-[#2d2d30] px-3 py-1 text-xs font-bold text-gray-300 border-b border-[#3e3e42] flex justify-between">
+        <span>{component.type}</span>
+      </div>
+      <div className="p-3 space-y-2">
+        {renderFields(component, onChange)}
+      </div>
+    </div>
+  );
+};
+
+function renderFields(component: ComponentData, onChange: (d: any) => void) {
+  switch (component.type) {
+    case ComponentType.TRANSFORM:
+      return (
+        <>
+          <Vector3Input label="Position" value={component.position} onChange={(v) => onChange({ ...component, position: v })} />
+          <Vector3Input label="Rotation" value={component.rotation} onChange={(v) => onChange({ ...component, rotation: v })} />
+          <Vector3Input label="Scale" value={component.scale} onChange={(v) => onChange({ ...component, scale: v })} />
+        </>
+      );
+    case ComponentType.MESH:
+      return (
+        <>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-400">Type</label>
+            <select 
+              value={component.meshType} 
+              onChange={(e) => onChange({ ...component, meshType: e.target.value })}
+              className="bg-[#333] text-white text-xs p-1 rounded border border-[#444]"
+            >
+              <option value="box">Box</option>
+              <option value="sphere">Sphere</option>
+              <option value="plane">Plane</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+             <label className="text-xs text-gray-400">Color</label>
+             <input type="color" value={component.color} onChange={(e) => onChange({...component, color: e.target.value})} className="w-full h-6 bg-transparent" />
+          </div>
+        </>
+      );
+    case ComponentType.LIGHT:
+      return (
+        <>
+           <div className="flex flex-col gap-1">
+             <label className="text-xs text-gray-400">Intensity</label>
+             <input 
+              type="number" step="0.1" 
+              value={component.intensity} 
+              onChange={(e) => onChange({ ...component, intensity: parseFloat(e.target.value) })}
+              className="bg-[#333] text-white text-xs p-1 rounded border border-[#444] w-full"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+             <label className="text-xs text-gray-400">Color</label>
+             <input type="color" value={component.color} onChange={(e) => onChange({...component, color: e.target.value})} className="w-full h-6 bg-transparent" />
+          </div>
+        </>
+      );
+    case ComponentType.REGION:
+      return (
+        <>
+           <Vector3Input label="Size" value={component.size} onChange={(v) => onChange({ ...component, size: v })} />
+           <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-400">Effect</label>
+            <select 
+              value={component.effect} 
+              onChange={(e) => onChange({ ...component, effect: e.target.value })}
+              className="bg-[#333] text-white text-xs p-1 rounded border border-[#444]"
+            >
+              <option value="gravity_override">Gravity Override</option>
+              <option value="color_tint">Color Tint</option>
+              <option value="speed_boost">Speed Boost</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+             <label className="text-xs text-gray-400">Priority</label>
+             <input 
+              type="number" step="1" 
+              value={component.priority} 
+              onChange={(e) => onChange({ ...component, priority: parseInt(e.target.value) })}
+              className="bg-[#333] text-white text-xs p-1 rounded border border-[#444] w-full"
+            />
+          </div>
+        </>
+      );
+    default:
+      return <div className="text-xs text-red-400">Unknown Component</div>;
+  }
+}
+
+const Vector3Input: React.FC<{ label: string; value: { x: number; y: number; z: number }; onChange: (v: any) => void }> = ({ label, value, onChange }) => {
+  const handleChange = (axis: 'x' | 'y' | 'z', val: string) => {
+    onChange({ ...value, [axis]: parseFloat(val) || 0 });
+  };
+  
+  return (
+    <div className="flex flex-col gap-1 mb-1">
+      <label className="text-[10px] text-gray-500 uppercase">{label}</label>
+      <div className="flex gap-1">
+        <input 
+          type="number" step="0.1" value={value.x} 
+          onChange={(e) => handleChange('x', e.target.value)}
+          className="w-1/3 bg-[#333] text-red-400 text-xs p-1 rounded border border-transparent focus:border-red-500 outline-none"
+        />
+        <input 
+          type="number" step="0.1" value={value.y} 
+          onChange={(e) => handleChange('y', e.target.value)}
+          className="w-1/3 bg-[#333] text-green-400 text-xs p-1 rounded border border-transparent focus:border-green-500 outline-none"
+        />
+        <input 
+          type="number" step="0.1" value={value.z} 
+          onChange={(e) => handleChange('z', e.target.value)}
+          className="w-1/3 bg-[#333] text-blue-400 text-xs p-1 rounded border border-transparent focus:border-blue-500 outline-none"
+        />
       </div>
     </div>
   );

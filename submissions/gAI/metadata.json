@@ -1,5 +1,5 @@
 {
-  "name": "Nebula Engine",
-  "description": "A modular, component-based 2D/3D game engine using Babylon.js. Features region-based logic, entity-component architecture, and JSON persistence.",
+  "name": "OmniEngine Web",
+  "description": "A production-grade, modular 3D game engine editor and runtime built on Babylon.js and React. Features a component-based architecture, region systems, and JSON persistence.",
   "requestFramePermissions": []
 }
