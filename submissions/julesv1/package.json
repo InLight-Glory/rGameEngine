@@ -1,4 +1,3 @@
-
 {
   "name": "julesv1",
   "version": "1.0.0",
@@ -8,7 +7,7 @@
   },
   "devDependencies": {
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^7.3.0"
   },
   "dependencies": {
     "babylonjs": "^7.0.0"

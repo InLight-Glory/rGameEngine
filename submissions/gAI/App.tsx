@@ -3,7 +3,7 @@ import { DEFAULT_LEVEL, Level, Entity, ComponentType, ComponentData, Vector3 } f
 import { Hierarchy } from './components/Hierarchy';
 import { Inspector } from './components/Inspector';
 import { Viewport } from './components/Viewport';
-import { Play, Square, Save, FolderOpen } from 'lucide-react';
+import { Play, Square, Save, FolderOpen, UploadCloud } from 'lucide-react';
 import { BabylonManager } from './engine/BabylonManager';
 
 export default function App() {
@@ -11,9 +11,11 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [babylonManager, setBabylonManager] = useState<BabylonManager | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string>("");
 
   const selectedEntity = level.entities.find(e => e.id === selectedId) || null;
 
+  // Handle Updates from Inspector (Text inputs)
   const handleUpdateEntity = (id: string, updates: Partial<Entity>) => {
     setLevel(prev => ({
       ...prev,
@@ -33,6 +35,44 @@ export default function App() {
       })
     }));
   };
+
+  // Sync selection to 3D engine
+  useEffect(() => {
+    if (babylonManager) {
+      babylonManager.selectEntity(selectedId);
+    }
+  }, [selectedId, babylonManager]);
+
+  // Setup callbacks when manager mounts
+  useEffect(() => {
+    if (babylonManager) {
+      babylonManager.onTransformChange = (id, pos, rot, scale) => {
+        // Find the transform component ID
+        setLevel(prev => {
+          const entity = prev.entities.find(e => e.id === id);
+          if (!entity) return prev;
+          
+          const transformComp = entity.components.find(c => c.type === ComponentType.TRANSFORM);
+          if (!transformComp) return prev;
+
+          // Update via handleUpdateComponent logic but inline to avoid stale state in closure
+          return {
+            ...prev,
+            entities: prev.entities.map(e => {
+              if (e.id !== id) return e;
+              return {
+                ...e,
+                components: e.components.map(c => {
+                   if (c.id !== transformComp.id) return c;
+                   return { ...c, position: pos, rotation: rot, scale: scale };
+                }) as ComponentData[]
+              };
+            })
+          };
+        });
+      };
+    }
+  }, [babylonManager]);
 
   const handleAddEntity = () => {
     const newEntity: Entity = {
@@ -80,7 +120,7 @@ export default function App() {
     }));
   };
 
-  const handleSave = () => {
+  const handleDownload = () => {
     const json = JSON.stringify(level, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -89,6 +129,28 @@ export default function App() {
     a.download = `${level.name.replace(/\s+/g, '_')}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleServerSave = async () => {
+    setSaveStatus("Saving...");
+    try {
+      const response = await fetch('save_level.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(level)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        setSaveStatus("Saved to Server!");
+        setTimeout(() => setSaveStatus(""), 3000);
+      } else {
+        setSaveStatus("Error: " + result.message);
+      }
+    } catch (e) {
+      console.error(e);
+      setSaveStatus("Error: Could not reach PHP server");
+    }
   };
 
   const handleLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,16 +177,27 @@ export default function App() {
              OmniEngine <span className="text-xs text-gray-400 font-normal">v1.1</span>
            </h1>
            <div className="h-6 w-px bg-gray-600 mx-2"></div>
+           
            <button 
-             onClick={handleSave}
+             onClick={handleServerSave}
+             className="flex items-center gap-2 text-xs bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded transition-colors"
+           >
+             <UploadCloud size={14} /> Save to PHP
+           </button>
+
+           <button 
+             onClick={handleDownload}
              className="flex items-center gap-2 text-xs hover:bg-[#444] px-2 py-1 rounded transition-colors"
            >
-             <Save size={14} /> Save JSON
+             <Save size={14} /> Download
            </button>
+           
            <label className="flex items-center gap-2 text-xs hover:bg-[#444] px-2 py-1 rounded transition-colors cursor-pointer">
              <FolderOpen size={14} /> Load JSON
              <input type="file" className="hidden" accept=".json" onChange={handleLoad} />
            </label>
+
+           {saveStatus && <span className="text-xs text-yellow-400 animate-pulse">{saveStatus}</span>}
         </div>
         
         <div className="flex items-center gap-2 bg-[#252526] p-1 rounded-lg border border-black shadow-inner">
@@ -155,16 +228,6 @@ export default function App() {
         {/* Center Panel: Viewport */}
         <div className="flex-1 bg-black relative">
           <Viewport level={level} onMount={setBabylonManager} />
-          
-          {/* Viewport Overlay UI */}
-          <div className="absolute top-4 left-4 flex gap-2">
-             <div className="bg-black/50 backdrop-blur text-xs px-2 py-1 rounded border border-white/10">
-               Perspective
-             </div>
-             <div className="bg-black/50 backdrop-blur text-xs px-2 py-1 rounded border border-white/10">
-               Lit
-             </div>
-          </div>
         </div>
 
         {/* Right Panel: Inspector */}
@@ -187,6 +250,7 @@ export default function App() {
          <div className="flex gap-4">
            <span>React 18</span>
            <span>Babylon.js</span>
+           <span>PHP Backend</span>
          </div>
       </div>
     </div>

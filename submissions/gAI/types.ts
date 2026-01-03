@@ -143,15 +143,35 @@ export const DEFAULT_LEVEL: Level = {
         {
           id: 'c_gnd_trans',
           type: ComponentType.TRANSFORM,
-          position: { x: 0, y: 0, z: 0 },
+          position: { x: 0, y: -0.5, z: 0 },
           rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 10, y: 1, z: 10 },
+          scale: { x: 10, y: 0.2, z: 10 },
         },
         {
           id: 'c_gnd_mesh',
           type: ComponentType.MESH,
-          meshType: 'plane',
+          meshType: 'box', 
           color: '#555555'
+        }
+      ]
+    },
+    {
+      id: 'cube_1',
+      name: 'Red Cube',
+      isActive: true,
+      components: [
+        {
+          id: 'c_cube_trans',
+          type: ComponentType.TRANSFORM,
+          position: { x: 0, y: 1, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        {
+          id: 'c_cube_mesh',
+          type: ComponentType.MESH,
+          meshType: 'box',
+          color: '#ff4444'
         }
       ]
     }
