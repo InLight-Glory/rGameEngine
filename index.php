@@ -159,10 +159,14 @@
                         }
                     }
                     
-                    // Check if project has an index file
+                    // Check if project has an index file (prefer Vite/static build output)
+                    $appIndexHtml = $itemPath . '/app/index.html';
                     $indexHtml = $itemPath . '/index.html';
                     $indexPhp = $itemPath . '/index.php';
-                    if (file_exists($indexHtml)) {
+                    if (file_exists($appIndexHtml)) {
+                        $projectInfo['hasIndex'] = true;
+                        $projectInfo['indexFile'] = 'app/index.html';
+                    } elseif (file_exists($indexHtml)) {
                         $projectInfo['hasIndex'] = true;
                         $projectInfo['indexFile'] = 'index.html';
                     } elseif (file_exists($indexPhp)) {

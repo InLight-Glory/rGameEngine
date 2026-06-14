@@ -1,0 +1,1 @@
+zAiCursor — Spec-Engine editor + Block Lab + Three.js Templates Marketplace. Includes 3D endless runner template (custom models/sounds) and export to .html / .zip.

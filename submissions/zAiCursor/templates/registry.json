@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "endless-runner",
+      "name": "3D Endless Runner",
+      "description": "Lane-based runner built with Three.js. Swap player model, colors, and sounds, then export a playable HTML game.",
+      "engine": "three.js",
+      "thumbnail": "🏃",
+      "entry": "runner.php?template=endless-runner",
+      "tags": ["3d", "arcade", "mobile-friendly"]
+    }
+  ]
+}

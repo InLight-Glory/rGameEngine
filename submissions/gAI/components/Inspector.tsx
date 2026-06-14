@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Entity, ComponentType, TransformComponent, MeshComponent, LightComponent, RegionComponent, ComponentData } from '../types';
 
 interface InspectorProps {

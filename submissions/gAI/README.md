@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# OmniEngine Web (gAI submission)
 
-# Run and deploy your AI Studio app
+React + Babylon.js scene editor: hierarchy, 3D viewport with gizmos, and component inspector.
 
-This contains everything you need to run your app locally.
+## View from the rGameEngine hub
 
-View your app in AI Studio: https://ai.studio/apps/drive/1eLUikW7H6_LoxSA8yAHzI3r3M1qp9sci
+The hub opens `app/index.html` (production build). Opening `index.html` in this folder redirects there automatically.
 
-## Run Locally
+After changing source files:
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+npm run build
+```
 
+Then refresh the hub link.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Open the URL Vite prints (usually `http://localhost:5173`).
+
+## Notes
+
+- `Save to PHP` expects a `save_level.php` endpoint; use **Download** / **Load JSON** without a backend.
+- Play mode toggle is UI-only in this build; the editor viewport still runs in edit mode.

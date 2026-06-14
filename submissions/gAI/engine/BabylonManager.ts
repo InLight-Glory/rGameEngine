@@ -14,7 +14,6 @@ import {
   Color3, 
   Color4,
   GizmoManager,
-  UtilityLayerRenderer,
   PointerEventTypes
 } from '@babylonjs/core';
 import { Level, Entity, ComponentType, TransformComponent, MeshComponent, LightComponent, RegionComponent } from '../types';

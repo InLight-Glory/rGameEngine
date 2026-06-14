@@ -1,0 +1,101 @@
+.mp-body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.mp-header {
+    padding: 20px 28px;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.mp-header h1 { margin: 0; font-size: 22px; flex: 1; }
+.mp-header a {
+    color: #93c5fd;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 8px 14px;
+    border: 1px solid #475569;
+    border-radius: 6px;
+}
+.mp-header a:hover { background: #334155; }
+
+.mp-hero {
+    padding: 32px 28px 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.mp-hero h2 { margin: 0 0 8px; font-size: 28px; }
+.mp-hero p { margin: 0; color: #94a3b8; max-width: 640px; line-height: 1.5; }
+
+.mp-badge {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 10px;
+    background: #422006;
+    color: #fcd34d;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 20px;
+}
+
+.mp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 24px 28px 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.mp-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.mp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    border-color: #64748b;
+}
+
+.mp-thumb {
+    height: 140px;
+    background: linear-gradient(135deg, #1e3a5f, #0f766e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+}
+
+.mp-body-card { padding: 16px; }
+.mp-body-card h3 { margin: 0 0 8px; font-size: 17px; }
+.mp-body-card p { margin: 0 0 12px; font-size: 13px; color: #94a3b8; line-height: 1.45; }
+.mp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.mp-tag {
+    font-size: 10px;
+    padding: 3px 8px;
+    background: #334155;
+    border-radius: 4px;
+    color: #cbd5e1;
+}
+.mp-engine { font-size: 11px; color: #38bdf8; margin-bottom: 12px; }
+.mp-card a.btn-use {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.mp-card a.btn-use:hover { background: #1d4ed8; }

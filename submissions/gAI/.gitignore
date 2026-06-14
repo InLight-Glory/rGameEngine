@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+# app/ is the committed production build for the PHP hub (do not ignore)
 *.local
 
 # Editor directories and files

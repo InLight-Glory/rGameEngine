@@ -1,0 +1,32 @@
+{
+  "templateId": "endless-runner",
+  "title": "My Endless Runner",
+  "player": {
+    "modelUrl": "",
+    "color": "#00aaff",
+    "scale": 1
+  },
+  "obstacle": {
+    "modelUrl": "",
+    "color": "#ff4444",
+    "scale": 1
+  },
+  "world": {
+    "groundColor": "#2d5a27",
+    "skyColor": "#87ceeb",
+    "fogColor": "#87ceeb",
+    "laneWidth": 2.2,
+    "speed": 14,
+    "gravity": 28
+  },
+  "audio": {
+    "jumpUrl": "",
+    "hitUrl": "",
+    "coinUrl": "",
+    "musicUrl": ""
+  },
+  "gameplay": {
+    "jumpForce": 11,
+    "spawnRate": 1.2
+  }
+}

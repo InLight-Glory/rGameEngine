@@ -1,34 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OmniEngine Web</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      body { margin: 0; overflow: hidden; background-color: #1e1e1e; color: #e0e0e0; }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-track { background: #2d2d2d; }
-      ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #777; }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@babylonjs/core": "https://esm.sh/@babylonjs/core@^8.44.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniEngine Web</title>
+  <link rel="icon" href="app/favicon.svg" type="image/svg+xml" />
+  <meta http-equiv="refresh" content="0; url=app/index.html" />
+  <style>
+    body { font-family: system-ui, sans-serif; background: #1e1e1e; color: #e0e0e0; padding: 2rem; }
+    a { color: #60a5fa; }
+  </style>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body>
+  <p>Redirecting to the editor… <a href="app/index.html">Open OmniEngine</a></p>
+  <script>location.replace('app/index.html');</script>
+</body>
 </html>

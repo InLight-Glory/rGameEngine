@@ -4,8 +4,8 @@
   "version": "1.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vite dev.html",
+    "build": "vite build && node scripts/finalize-build.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

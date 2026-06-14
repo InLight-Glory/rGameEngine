@@ -1,0 +1,1 @@
+OmniEngine Web — React + Babylon.js editor (hierarchy, 3D viewport, inspector). Built output lives in app/; run npm install && npm run build to refresh.
